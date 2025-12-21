@@ -1,4 +1,6 @@
+import 'package:connect_hub/bindings/call_binding.dart';
 import 'package:connect_hub/middleware/auth_middleware.dart';
+import 'package:connect_hub/views/call/call_view.dart';
 import 'package:get/get.dart';
 import 'app_routes.dart';
 import '../bindings/auth_binding.dart';
@@ -32,5 +34,10 @@ class AppPages {
       binding: HomeBinding(),
       middlewares: [AuthMiddleware()], 
     ),
+    GetPage(
+  name: Routes.CALL, // Define '/call' in app_routes.dart
+  page: () => const CallView(),
+  binding: CallBinding(),
+),
   ];
 }

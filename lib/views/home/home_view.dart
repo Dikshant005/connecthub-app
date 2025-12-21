@@ -8,47 +8,82 @@ class HomeView extends GetView<HomeController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text("Connect Hub"),
+        backgroundColor: Colors.white,
+        elevation: 0,
+        title: const Text("Connect Hub", style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () => controller.logout(),
+          // PROFILE AVATAR
+          Padding(
+            padding: const EdgeInsets.only(right: 16.0),
+            child: GestureDetector(
+              onTap: controller.showProfileDialog,
+              child: CircleAvatar(
+                radius: 18,
+                backgroundColor: Colors.grey[200],
+                child: const Icon(Icons.person, color: Colors.deepPurple),
+              ),
+            ),
           )
         ],
       ),
       body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Obx(() => Text(
-              "Welcome, ${controller.username.value}!",
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            )),
-            const SizedBox(height: 30),
-            
-            // JOIN BUTTON
-            ElevatedButton.icon(
-              onPressed: controller.joinMeeting,
-              icon: const Icon(Icons.video_call),
-              label: const Text("Join Meeting"),
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // 1. CREATE MEETING BUTTON (Big & Prominent)
+              InkWell(
+                onTap: controller.startNewMeeting,
+                borderRadius: BorderRadius.circular(20),
+                child: Container(
+                  height: 150,
+                  decoration: BoxDecoration(
+                    color: Colors.deepPurple,
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(color: Colors.deepPurple.withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 5))
+                    ]
+                  ),
+                  child: const Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.video_call, size: 50, color: Colors.white),
+                      SizedBox(height: 10),
+                      Text("Create New Meeting", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold))
+                    ],
+                  ),
+                ),
               ),
-            ),
-            
-            const SizedBox(height: 20),
-            
-            // CREATE BUTTON
-            OutlinedButton.icon(
-              onPressed: controller.createMeeting,
-              icon: const Icon(Icons.add),
-              label: const Text("Create Meeting"),
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+              
+              const SizedBox(height: 30),
+
+              // 2. JOIN MEETING BUTTON (Outlined)
+              InkWell(
+                onTap: controller.openJoinDialog,
+                borderRadius: BorderRadius.circular(20),
+                child: Container(
+                  height: 150,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    border: Border.all(color: Colors.deepPurple, width: 2),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: const Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.add_box_rounded, size: 50, color: Colors.deepPurple),
+                      SizedBox(height: 10),
+                      Text("Join with Code", style: TextStyle(color: Colors.deepPurple, fontSize: 18, fontWeight: FontWeight.bold))
+                    ],
+                  ),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
