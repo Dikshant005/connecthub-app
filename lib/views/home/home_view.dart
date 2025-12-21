@@ -53,7 +53,7 @@ class HomeView extends GetView<HomeController> {
                     children: [
                       Icon(Icons.video_call, size: 50, color: Colors.white),
                       SizedBox(height: 10),
-                      Text("Create New Meeting", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold))
+                      Text("Create Instant Meeting", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold))
                     ],
                   ),
                 ),
@@ -75,7 +75,7 @@ class HomeView extends GetView<HomeController> {
                   child: const Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.add_box_rounded, size: 50, color: Colors.deepPurple),
+                      Icon(Icons.keyboard_alt_outlined, size: 50, color: Colors.deepPurple),
                       SizedBox(height: 10),
                       Text("Join with Code", style: TextStyle(color: Colors.deepPurple, fontSize: 18, fontWeight: FontWeight.bold))
                     ],
