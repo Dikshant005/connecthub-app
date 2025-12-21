@@ -25,17 +25,12 @@ class AppPages {
     ),
     GetPage(
       name: Routes.HOME,
-      page: () => const HomeView(),
-      binding: HomeBinding(),
-    ),
-    GetPage(
-      name: Routes.HOME,
-      page: () => const HomeView(),
+      page: () =>  HomeView(),
       binding: HomeBinding(),
       middlewares: [AuthMiddleware()], 
     ),
     GetPage(
-  name: Routes.CALL, // Define '/call' in app_routes.dart
+  name: Routes.CALL, 
   page: () => const CallView(),
   binding: CallBinding(),
 ),
