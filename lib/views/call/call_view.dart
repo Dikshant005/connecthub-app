@@ -12,7 +12,7 @@ class CallView extends GetView<CallController> {
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          // 1. REMOTE VIDEO (Full Screen)
+          // remote video (full screen)
           Positioned.fill(
             child: Obx(() {
               if (controller.isRemoteConnected.value) {
@@ -35,7 +35,7 @@ class CallView extends GetView<CallController> {
             }),
           ),
 
-          // 2. LOCAL VIDEO (Small Box - Top Right)
+          // 2. local video (small overlay)
           Positioned(
             top: 50,
             right: 20,
@@ -66,7 +66,7 @@ class CallView extends GetView<CallController> {
             ),
           ),
 
-          // 3. CALL CONTROLS (Bottom)
+          // call controls
           Positioned(
             bottom: 30,
             left: 0,
@@ -74,17 +74,17 @@ class CallView extends GetView<CallController> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // END CALL BUTTON
+                // end call button 
                 FloatingActionButton(
                   backgroundColor: Colors.red,
                   child: const Icon(Icons.call_end),
-                  onPressed: () => controller.leaveCall(), // Calls the API now
+                  onPressed: () => controller.onEndCallPressed(), // Calls the API now
                 ),
               ],
             ),
           ),
           
-          // 4. ROOM ID DISPLAY
+          // room id display
           Positioned(
             top: 50,
             left: 20,

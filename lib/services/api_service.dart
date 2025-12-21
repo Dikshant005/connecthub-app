@@ -2,19 +2,18 @@ import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 
 class ApiService extends GetConnect {
-  // 1. Set Base URL to the ROOT domain (No /auth or /meetings yet)
   final String mainUrl = "https://connecthub.dikshant-ahalawat.live"; 
   
   final box = GetStorage();
 
   @override
   void onInit() {
-    httpClient.baseUrl = mainUrl; // Set root as base
+    httpClient.baseUrl = mainUrl; 
     
     allowAutoSignedCert = true; 
     httpClient.timeout = const Duration(seconds: 20);
 
-    // Add Token to requests
+    // add token to request headers 
     httpClient.addRequestModifier<dynamic>((request) {
       String? token = box.read('token');
       if (token != null) {
@@ -26,7 +25,7 @@ class ApiService extends GetConnect {
     super.onInit();
   }
 
-  // --- AUTH ENDPOINTS (Add /auth here) ---
+  // auth endpoints
 
   Future<Response> login(String email, String password) {
     return post('/auth/login', { "email": email, "password": password });
@@ -40,7 +39,7 @@ class ApiService extends GetConnect {
     return post('/auth/logout', {});
   }
 
-  // --- MEETING ENDPOINTS (Add /meetings here) ---
+  // meeting endpoints
 
   Future<Response> createMeeting(String title) {
     // Result: https://connecthub.dikshant-ahalawat.live/meetings/
@@ -59,5 +58,13 @@ class ApiService extends GetConnect {
       '/meetings/$roomId/join', 
       {} 
     );
+  }
+  Future<Response> leaveMeeting(String roomId) {
+    return post('/meetings/$roomId/leave', {});
+  }
+
+  // Host destroys meeting
+  Future<Response> endMeeting(String roomId) {
+    return post('/meetings/$roomId/end', {});
   }
 }
