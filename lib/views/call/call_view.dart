@@ -15,53 +15,92 @@ class CallView extends GetView<CallController> {
           // remote video (full screen)
           Positioned.fill(
             child: Obx(() {
-              if (controller.isRemoteConnected.value) {
-                return RTCVideoView(
-                  controller.remoteRenderer,
-                  objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
-                );
+              // logic to swap views
+              bool showLocal = controller.isViewSwapped.value;
+
+              if (showLocal) {
+                if (controller.isLocalReady.value) {
+                  return controller.isVideoOn.value 
+                      ? RTCVideoView(
+                          controller.localRenderer,
+                          mirror: true,
+                          objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+                        )
+                      : const Center(child: Icon(Icons.videocam_off, color: Colors.grey, size: 60));
+                } else {
+                  return const Center(child: CircularProgressIndicator(color: Colors.blue));
+                }
               } else {
-                return const Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      CircularProgressIndicator(color: Colors.white),
-                      SizedBox(height: 20),
-                      Text("Waiting for participant...", style: TextStyle(color: Colors.white)),
-                    ],
-                  ),
-                );
+                if (controller.isRemoteConnected.value) {
+                  return RTCVideoView(
+                    controller.remoteRenderer,
+                    objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+                  );
+                } else {
+                  return const Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        CircularProgressIndicator(color: Colors.white),
+                        SizedBox(height: 20),
+                        Text("Waiting for participant...", style: TextStyle(color: Colors.white)),
+                      ],
+                    ),
+                  );
+                }
               }
             }),
           ),
 
-          // 2. local video (small overlay)
+          // local video (small overlay)
           Positioned(
             top: 50,
             right: 20,
-            child: Container(
-              width: 120,
-              height: 160,
-              decoration: BoxDecoration(
-                color: Colors.black,
-                border: Border.all(color: Colors.white54),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(10),
-                child: Obx(() {
-                  if (controller.isLocalReady.value) {
-                    return RTCVideoView(
-                      controller.localRenderer,
-                      mirror: true,
-                      objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
-                    );
-                  } else {
-                    return const Center(
-                      child: CircularProgressIndicator(color: Colors.blueAccent, strokeWidth: 2),
-                    );
-                  }
-                }),
+            child: GestureDetector(
+              onTap: () => controller.toggleViewSwap(),
+              child: Container(
+                width: 120,
+                height: 160,
+                decoration: BoxDecoration(
+                  color: Colors.black,
+                  border: Border.all(color: Colors.white54),
+                  borderRadius: BorderRadius.circular(10),
+                  boxShadow: const [BoxShadow(color: Colors.black45, blurRadius: 10)],
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: Obx(() {
+                    // logic to swap views
+                    bool showRemote = controller.isViewSwapped.value;
+
+                    if (showRemote) {
+                      if (controller.isRemoteConnected.value) {
+                        return RTCVideoView(
+                          controller.remoteRenderer,
+                          objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+                        );
+                      } else {
+                        return const Center(child: Icon(Icons.person_off, color: Colors.grey, size: 40));
+                      }
+                    } else {
+                      if (controller.isLocalReady.value) {
+                        if (controller.isVideoOn.value) {
+                          return RTCVideoView(
+                            controller.localRenderer,
+                            mirror: true,
+                            objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+                          );
+                        } else {
+                          return const Center(child: Icon(Icons.videocam_off, color: Colors.grey, size: 40));
+                        }
+                      } else {
+                        return const Center(
+                          child: CircularProgressIndicator(color: Colors.blueAccent, strokeWidth: 2),
+                        );
+                      }
+                    }
+                  }),
+                ),
               ),
             ),
           ),
@@ -71,16 +110,73 @@ class CallView extends GetView<CallController> {
             bottom: 30,
             left: 0,
             right: 0,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // end call button 
-                FloatingActionButton(
-                  backgroundColor: Colors.red,
-                  child: const Icon(Icons.call_end),
-                  onPressed: () => controller.onEndCallPressed(), // Calls the API now
+            child: SafeArea(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade900.withOpacity(0.8),
+                        borderRadius: BorderRadius.circular(30),
+                        border: Border.all(color: Colors.white10),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Obx(() => _buildIconButton(
+                            icon: controller.isMicOn.value ? Icons.mic : Icons.mic_off,
+                            color: controller.isMicOn.value ? Colors.white : Colors.redAccent,
+                            onTap: controller.toggleMic,
+                          )),
+
+                          Obx(() => _buildIconButton(
+                            icon: controller.isVideoOn.value ? Icons.videocam : Icons.videocam_off,
+                            color: controller.isVideoOn.value ? Colors.white : Colors.redAccent,
+                            onTap: controller.toggleCamera,
+                          )),
+
+                          _buildIconButton(
+                            icon: Icons.screen_share_rounded,
+                            onTap: controller.onScreenSharePressed,
+                          ),
+
+                          _buildIconButton(
+                            icon: Icons.chat_bubble_outline_rounded,
+                            onTap: controller.onChatPressed,
+                          ),
+
+                          _buildIconButton(
+                            icon: Icons.people_outline_rounded,
+                            onTap: controller.onParticipantsPressed,
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(width: 10),
+
+                    // end call button 
+                    GestureDetector(
+                      onTap: () => controller.onEndCallPressed(),
+                      child: Container(
+                        height: 55,
+                        width: 55,
+                        decoration: BoxDecoration(
+                          color: Colors.red,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(color: Colors.red.withOpacity(0.5), blurRadius: 10)
+                          ]
+                        ),
+                        child: const Icon(Icons.call_end, color: Colors.white, size: 28),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
           
@@ -101,6 +197,24 @@ class CallView extends GetView<CallController> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildIconButton({
+    required IconData icon, 
+    required VoidCallback onTap, 
+    Color color = Colors.white
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(30),
+        child: Padding(
+          padding: const EdgeInsets.all(12.0),
+          child: Icon(icon, color: color, size: 24),
+        ),
       ),
     );
   }

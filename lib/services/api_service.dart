@@ -67,4 +67,9 @@ class ApiService extends GetConnect {
   Future<Response> endMeeting(String roomId) {
     return post('/meetings/$roomId/end', {});
   }
+
+  // paritcipants
+  Future<Response> getParticipants(String roomId) {
+    return get('/meetings/$roomId/participants');
+  }
 }

@@ -1,13 +1,14 @@
+import 'package:connect_hub/controllers/home_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
-import 'dart:math';
 
 class HomeView extends StatelessWidget {
   HomeView({super.key});
 
   final box = GetStorage();
   final TextEditingController _joinCodeController = TextEditingController();
+  final HomeController controller = Get.find();
 
   // logout bottom sheet
   void _logout(BuildContext context) {
@@ -73,18 +74,6 @@ class HomeView extends StatelessWidget {
     );
   }
 
-  // generate random room id
-  String _generateRoomId() {
-    var r = Random();
-    const chars = 'abcdefghijklmnopqrstuvwxyz1234567890';
-    return List.generate(8, (index) => chars[r.nextInt(chars.length)]).join();
-  }
-
-  void _startNewMeeting() {
-    String roomId = _generateRoomId();
-    Get.toNamed('/call', arguments: {'roomId': roomId, 'isHost': true});
-  }
-
   // join bottom sheet
   void _showJoinDialog(BuildContext context) {
     showModalBottomSheet(
@@ -111,7 +100,7 @@ class HomeView extends StatelessWidget {
             TextField(
               controller: _joinCodeController,
               decoration: InputDecoration(
-                hintText: "e.g. abc-123",
+                hintText: "e.g. 123456",
                 filled: true,
                 fillColor: Colors.grey[50],
                 prefixIcon: const Icon(Icons.keyboard, color: Colors.indigo),
@@ -233,7 +222,7 @@ class HomeView extends StatelessWidget {
               color: Colors.indigo,
               textColor: Colors.white,
               iconColor: Colors.white,
-              onTap: _startNewMeeting,
+              onTap: controller.createMeeting,
             ),
 
             const SizedBox(height: 20),
