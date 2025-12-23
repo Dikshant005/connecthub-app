@@ -7,7 +7,7 @@ plugins {
 
 android {
     namespace = "com.example.connect_hub"
-    compileSdk = 34
+    compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
     compileOptions {

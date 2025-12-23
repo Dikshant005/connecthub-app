@@ -25,15 +25,18 @@ class HomeController extends GetxController {
   }
 
   // create meeting
-  void createMeeting() async {
+  void createMeeting({String? title}) async {
     Get.dialog(
       const Center(child: CircularProgressIndicator(color: Colors.indigo)),
       barrierDismissible: false,
     );
 
     try {
-      final response =
-          await _api.createMeeting("Instant Meeting by $displayName");
+      final meetingTitle = (title ?? '').trim().isEmpty
+          ? "New Meeting"
+          : title!.trim();
+
+      final response = await _api.createMeeting(meetingTitle);
       Get.back(); // close loader
 
       if (response.statusCode == 201) {

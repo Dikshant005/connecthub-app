@@ -7,7 +7,7 @@ class HomeView extends StatelessWidget {
   HomeView({super.key});
 
   final box = GetStorage();
-  final TextEditingController _joinCodeController = TextEditingController();
+  final TextEditingController _meetingTitleController = TextEditingController();
   final HomeController controller = Get.find();
 
   // logout bottom sheet
@@ -98,7 +98,7 @@ class HomeView extends StatelessWidget {
             Text("Enter the code shared by the host.", style: TextStyle(color: Colors.grey[600])),
             const SizedBox(height: 25),
             TextField(
-              controller: _joinCodeController,
+              controller: controller.joinCodeController,
               decoration: InputDecoration(
                 hintText: "e.g. 123456",
                 filled: true,
@@ -117,13 +117,9 @@ class HomeView extends StatelessWidget {
               height: 55,
               child: ElevatedButton(
                 onPressed: () {
-                  if (_joinCodeController.text.trim().isNotEmpty) {
-                    Get.back();
-                    Get.toNamed('/call', arguments: {
-                      'roomId': _joinCodeController.text.trim(),
-                      'isHost': false
-                    });
-                  }
+                  if (controller.joinCodeController.text.trim().isEmpty) return;
+                  Get.back();
+                  controller.joinMeeting();
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.indigo,
@@ -131,6 +127,96 @@ class HomeView extends StatelessWidget {
                   elevation: 0,
                 ),
                 child: const Text("Join Now", style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // create meeting bottom sheet
+  void _showCreateMeetingDialog(BuildContext context) {
+    final displayName = box.read('username') ?? "Guest";
+    if (_meetingTitleController.text.trim().isEmpty) {
+      _meetingTitleController.text = "Instant Meeting by $displayName";
+      _meetingTitleController.selection = TextSelection.fromPosition(
+        TextPosition(offset: _meetingTitleController.text.length),
+      );
+    }
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+        ),
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+          left: 24,
+          right: 24,
+          top: 24,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              "New Meeting",
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              "Give your meeting a title.",
+              style: TextStyle(color: Colors.grey[600]),
+            ),
+            const SizedBox(height: 25),
+            TextField(
+              controller: _meetingTitleController,
+              textInputAction: TextInputAction.done,
+              decoration: InputDecoration(
+                hintText: "e.g. Standup / Team Call",
+                filled: true,
+                fillColor: Colors.grey[50],
+                prefixIcon: const Icon(Icons.title, color: Colors.indigo),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: const EdgeInsets.all(20),
+              ),
+              onSubmitted: (_) {
+                final title = _meetingTitleController.text.trim();
+                Get.back();
+                controller.createMeeting(title: title);
+              },
+            ),
+            const SizedBox(height: 25),
+            SizedBox(
+              width: double.infinity,
+              height: 55,
+              child: ElevatedButton(
+                onPressed: () {
+                  final title = _meetingTitleController.text.trim();
+                  Get.back();
+                  controller.createMeeting(title: title);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.indigo,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  elevation: 0,
+                ),
+                child: const Text(
+                  "Start Meeting",
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
             ),
           ],
@@ -222,7 +308,7 @@ class HomeView extends StatelessWidget {
               color: Colors.indigo,
               textColor: Colors.white,
               iconColor: Colors.white,
-              onTap: controller.createMeeting,
+              onTap: () => _showCreateMeetingDialog(context),
             ),
 
             const SizedBox(height: 20),

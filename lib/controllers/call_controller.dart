@@ -3,14 +3,13 @@ import 'dart:convert';
 import 'package:connect_hub/controllers/screen_share_controller.dart';
 import 'package:connect_hub/views/call/chat_view.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // Required for Clipboard
 import 'package:get/get.dart' hide navigator;
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:get_storage/get_storage.dart';
 import '../services/socket_service.dart';
 import '../services/api_service.dart';
-// inside CallController onInit()
-import 'package:permission_handler/permission_handler.dart'; // Add this package
-
+import 'package:permission_handler/permission_handler.dart'; 
 
 class CallController extends GetxController {
   final SocketService _socketService = Get.find();
@@ -30,6 +29,7 @@ class CallController extends GetxController {
   late String roomId;
   late bool isHost;
   late String myUserId;
+  late String meetTitle;
   String? remoteUserId;
 
   bool _joinedSocketRoom = false;
@@ -44,10 +44,21 @@ class CallController extends GetxController {
   final isMicOn = true.obs;
   final isVideoOn = true.obs;
   final isViewSwapped = false.obs;
+  final isRemoteMicOn = true.obs; 
 
   bool _isDisposed = false;
   final List<RTCIceCandidate> _candidateQueue = [];
   bool _isPcReady = false;
+
+  Future<void> _stopScreenShareIfNeeded() async {
+    try {
+      if (Get.isRegistered<ScreenShareController>()) {
+        await Get.find<ScreenShareController>().stopScreenShare();
+      }
+    } catch (_) {
+      // best-effort cleanup
+    }
+  }
 
   @override
   void onInit() async {
@@ -55,6 +66,7 @@ class CallController extends GetxController {
     final args = Get.arguments;
     roomId = args['roomId'];
     isHost = args['isHost'];
+    meetTitle = args['meetTitle'] ?? "New Meeting";
     myUserId = (box.read('userId')?.toString() ?? 'Unknown');
 
     if (_socketService.socket.disconnected) {
@@ -74,6 +86,80 @@ class CallController extends GetxController {
     await Permission.notification.request();
   }
 
+  // meeting info dialog
+  void showMeetingInfo() {
+    Get.dialog(
+      Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text("Meeting Info", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Get.back(),
+                  )
+                ],
+              ),
+              const Divider(),
+              const SizedBox(height: 10),
+              
+              // Meeting Title
+              const Text("Topic", style: TextStyle(color: Colors.grey, fontSize: 12)),
+              const SizedBox(height: 4),
+              Text(meetTitle, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+              
+              const SizedBox(height: 20),
+              
+              // Room ID Section
+              const Text("Room ID", style: TextStyle(color: Colors.grey, fontSize: 12)),
+              const SizedBox(height: 4),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.grey.shade300),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    SelectableText(
+                      roomId, 
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500, letterSpacing: 1),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.copy, color: Colors.indigo, size: 20),
+                      onPressed: () {
+                        // Copy to clipboard
+                        Clipboard.setData(ClipboardData(text: roomId));
+                        Get.back(); // Close dialog
+                        Get.snackbar(
+                          "Copied", 
+                          "Room ID copied to clipboard!", 
+                          backgroundColor: Colors.green, 
+                          colorText: Colors.white,
+                          snackPosition: SnackPosition.BOTTOM,
+                          margin: const EdgeInsets.all(10),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> _ensureBackendJoin() async {
     try {
       await _api.joinMeeting(roomId);
@@ -83,18 +169,15 @@ class CallController extends GetxController {
   }
 
   // Fetch participants from backend
-
   void fetchParticipants() async {
     try {
       final res = await _api.getParticipants(roomId);
       if (res.statusCode == 200) {
-        // handle response body
         var data = res.body;
         if (data is String) {
           data = jsonDecode(data);
         }
 
-        // update participants list
         if (data is Map && data['participants'] != null) {
           List<dynamic> list = data['participants'];
           participants.value = list; 
@@ -112,11 +195,10 @@ class CallController extends GetxController {
   }
 
   // socket event listeners
-
   void _setupSocketListeners() {
     if (_isDisposed) return;
 
-    // webrtc signalling event
+    // 1. User Connected Event
     _socketService.socket.on('user-connected', (userId) async {
       if (_isDisposed || userId == myUserId) return;
 
@@ -129,10 +211,22 @@ class CallController extends GetxController {
         await _createPeerConnection();
         await _createOffer();
       }
-        fetchParticipants();
+      fetchParticipants();
     });
 
-    // update participants on join/leave
+    // 2. Mic Toggled Event (Moved out of user-connected)
+    _socketService.socket.on('mic-toggled', (data) {
+      if (_isDisposed) return;
+      String userId = data['userId'];
+      bool status = data['isMicOn'];
+
+      if (userId == remoteUserId) {
+        isRemoteMicOn.value = status;
+        print("🎤 Remote user mic changed to: $status");
+      }
+    });
+
+    // 3. User Joined/Left Events
     _socketService.socket.on('user-joined', (data) {
        fetchParticipants();
     });
@@ -141,28 +235,27 @@ class CallController extends GetxController {
        fetchParticipants(); 
     });
 
-    // clean up on user disconnect
+    // 4. User Disconnected
     void handleUserLeft(data) {
        if (_isDisposed) return;
        debugPrint("Remote user disconnected");
        _softResetPeer();
-       // We also fetch participants here just in case 'user-left' missed
        fetchParticipants(); 
        Get.snackbar("Info", "Participant left the meeting");
     }
 
     _socketService.socket.on('user-disconnected', handleUserLeft);
     
-    // meeting-ended event
+    // 5. Meeting Ended
     _socketService.socket.on('meeting-ended', (data) {
       if (_isDisposed) return;
       if (!isHost) {
         Get.snackbar("Meeting Ended", data['message'] ?? "Host ended the meeting");
       }
-      _leaveAndNavigate();
+      unawaited(_leaveAndNavigate());
     });
 
-    // signaling event
+    // 6. WebRTC Signal
     _socketService.socket.on('signal', (args) async {
       if (_isDisposed) return;
       if (args is! List || args.length < 2) return;
@@ -187,11 +280,11 @@ class CallController extends GetxController {
         _processCandidateQueue();
       }
       else if (type == 'force-leave') {
-        _leaveAndNavigate();
+        unawaited(_leaveAndNavigate());
       }
     });
 
-    // ice-candidate event
+    // 7. ICE Candidate
     _socketService.socket.on('ice-candidate', (data) {
       if (_isDisposed) return;
       var candidateMap = data['candidate']; 
@@ -208,8 +301,27 @@ class CallController extends GetxController {
     });
   }
 
-  // clean up peer connection
+  // get local user's display name
+  String getLocalName() {
+    var user = participants.firstWhere(
+      (p) => p['_id'] == myUserId, 
+      orElse: () => {'username': 'Me'}
+    );
+    String name = user['username'] ?? 'Me';
+    return isHost ? "$name (Host)" : name;
+  }
+  // get remote user's display name
+  String getRemoteName() {
+    if (remoteUserId == null) return "Waiting...";
+    var user = participants.firstWhere(
+      (p) => p['_id'] == remoteUserId, 
+      orElse: () => {'username': 'Participant'}
+    );
+    String name = user['username'] ?? 'Participant';
+    return !isHost ? "$name (Host)" : name; 
+  }
 
+  // clean up peer connection
   void _softResetPeer() {
     if (_isDisposed) return;
     _peerConnection?.close();
@@ -221,12 +333,14 @@ class CallController extends GetxController {
     try { remoteRenderer.srcObject = null; } catch (_) {}
   }
 
-  void _leaveAndNavigate() {
+  Future<void> _leaveAndNavigate() async {
+    await _stopScreenShareIfNeeded();
     _socketService.socket.off('meeting-ended');
     _socketService.socket.off('user-connected');
     _socketService.socket.off('signal');
     _socketService.socket.off('ice-candidate');
     _socketService.socket.off('user-disconnected');
+    _socketService.socket.off('mic-toggled'); // Remove mic listener too
     _socketService.socket.disconnect();
     Get.offAllNamed('/home');
   }
@@ -234,6 +348,7 @@ class CallController extends GetxController {
   @override
   void onClose() {
     _isDisposed = true;
+    unawaited(_stopScreenShareIfNeeded());
     _peerConnection?.close();
     _peerConnection = null;
     _localStream?.getTracks().forEach((t) => t.stop());
@@ -250,6 +365,13 @@ class CallController extends GetxController {
       bool newStatus = !isMicOn.value;
       isMicOn.value = newStatus;
       _localStream!.getAudioTracks().forEach((t) => t.enabled = newStatus);
+
+      // Emit event to server
+      _socketService.socket.emit('mic-toggle', {
+        'roomId': roomId,
+        'userId': myUserId,
+        'isMicOn': newStatus
+      });
     }
   }
 
@@ -267,7 +389,6 @@ class CallController extends GetxController {
 
   void onScreenSharePressed() {
     try {
-      // Find the dedicated controller and toggle sharing
       Get.find<ScreenShareController>().toggleScreenShare();
     } catch (e) {
       debugPrint("Error finding ScreenShareController: $e");
@@ -283,7 +404,6 @@ class CallController extends GetxController {
     );
   }
 
-  // participants bottom sheet
   void onParticipantsPressed() {
     Get.bottomSheet(
       Container(
@@ -309,8 +429,6 @@ class CallController extends GetxController {
               ),
             ),
             const Divider(),
-            
-            // participants list
             Expanded(
               child: Obx(() => ListView.builder(
                 itemCount: participants.length,
@@ -335,7 +453,7 @@ class CallController extends GetxController {
         ),
       ),
       backgroundColor: Colors.transparent,
-      isScrollControlled: true, // Allows sheet to go taller
+      isScrollControlled: true,
       ignoreSafeArea: false,
     );
   }
@@ -354,26 +472,23 @@ class CallController extends GetxController {
   
   void _leaveMeeting() async {
     Get.back();
-    // Use the backend API to leave, which emits 'user-left' to others
     try { await _api.post('/meetings/$roomId/leave', {}); } catch (_) {}
-    _leaveAndNavigate();
+    await _leaveAndNavigate();
   }
 
   void _endMeetingForAll() async {
     Get.back();
     if (remoteUserId != null) {
-      // to send force signal via WebRTC as backup
       _socketService.socket.emit('signal', [
         remoteUserId,
         {'type': 'force-leave', 'message': 'Host ended the meeting'}
       ]);
     }
     try { await _api.endMeeting(roomId); } catch (_) {}
-    _leaveAndNavigate();
+    await _leaveAndNavigate();
   }
 
   // webrtc setup
-
   Future<void> _createPeerConnection() async {
     if (_isDisposed) return;
     if (_peerConnection != null) {
@@ -463,7 +578,6 @@ class CallController extends GetxController {
     localRenderer.srcObject = _localStream;
     isLocalReady.value = true;
 
-    // Join via Socket (wait until connected)
     _joinSocketRoomWhenConnected();
   }
 
@@ -477,7 +591,6 @@ class CallController extends GetxController {
       return;
     }
 
-    // Join once socket connects (avoids emit being dropped)
     _socketService.socket.on('connect', (_) {
       if (_isDisposed || _joinedSocketRoom) return;
       _joinedSocketRoom = true;

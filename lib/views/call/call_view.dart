@@ -1,9 +1,9 @@
 import 'package:connect_hub/controllers/screen_share_controller.dart';
+import 'package:connect_hub/widgets/video_tile.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:flutter_webrtc/flutter_webrtc.dart';
 import '../../controllers/call_controller.dart';
-import 'screen_share_view.dart'; // 🟢 IMPORT THE VIEW
+import 'screen_share_view.dart'; 
 
 class CallView extends GetView<CallController> {
   const CallView({super.key});
@@ -11,7 +11,7 @@ class CallView extends GetView<CallController> {
   @override
   Widget build(BuildContext context) {
     final ScreenShareController screenCtrl = Get.find();
-    
+
     return Scaffold(
       backgroundColor: Colors.black,
       body: Stack(
@@ -27,23 +27,36 @@ class CallView extends GetView<CallController> {
                 if (screenCtrl.isScreenSharing.value) {
                   return const ScreenShareView();
                 }
-                
+
                 if (controller.isLocalReady.value) {
-                  return controller.isVideoOn.value 
-                      ? RTCVideoView(
-                          controller.localRenderer,
-                          mirror: true,
-                          objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+                  return controller.isVideoOn.value
+                      // 🟢 UPDATED: Use VideoTile instead of raw RTCVideoView
+                      ? VideoTile(
+                          renderer: controller.localRenderer,
+                          userName: controller.getLocalName(),
+                          isMicOn: controller.isMicOn.value,
+                          isLocal: true,
                         )
-                      : const Center(child: Icon(Icons.videocam_off, color: Colors.grey, size: 60));
+                      : const Center(
+                          child: Icon(
+                            Icons.videocam_off,
+                            color: Colors.grey,
+                            size: 60,
+                          ),
+                        );
                 } else {
-                  return const Center(child: CircularProgressIndicator(color: Colors.blue));
+                  return const Center(
+                    child: CircularProgressIndicator(color: Colors.blue),
+                  );
                 }
               } else {
                 if (controller.isRemoteConnected.value) {
-                  return RTCVideoView(
-                    controller.remoteRenderer,
-                    objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+                  // 🟢 UPDATED: Use VideoTile for Remote User
+                  return VideoTile(
+                    renderer: controller.remoteRenderer,
+                    userName: controller.getRemoteName(),
+                    isMicOn: controller.isRemoteMicOn.value,
+                    isLocal: false,
                   );
                 } else {
                   return const Center(
@@ -52,7 +65,10 @@ class CallView extends GetView<CallController> {
                       children: [
                         CircularProgressIndicator(color: Colors.white),
                         SizedBox(height: 20),
-                        Text("Waiting for participant...", style: TextStyle(color: Colors.white)),
+                        Text(
+                          "Waiting for participant...",
+                          style: TextStyle(color: Colors.white),
+                        ),
                       ],
                     ),
                   );
@@ -74,7 +90,9 @@ class CallView extends GetView<CallController> {
                   color: Colors.black,
                   border: Border.all(color: Colors.white54),
                   borderRadius: BorderRadius.circular(10),
-                  boxShadow: const [BoxShadow(color: Colors.black45, blurRadius: 10)],
+                  boxShadow: const [
+                    BoxShadow(color: Colors.black45, blurRadius: 10),
+                  ],
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(10),
@@ -84,12 +102,21 @@ class CallView extends GetView<CallController> {
 
                     if (showRemote) {
                       if (controller.isRemoteConnected.value) {
-                        return RTCVideoView(
-                          controller.remoteRenderer,
-                          objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+                        // 🟢 UPDATED: Use VideoTile for Remote Overlay
+                        return VideoTile(
+                          renderer: controller.remoteRenderer,
+                          userName: controller.getRemoteName(),
+                          isMicOn: controller.isRemoteMicOn.value,
+                          isLocal: false,
                         );
                       } else {
-                        return const Center(child: Icon(Icons.person_off, color: Colors.grey, size: 40));
+                        return const Center(
+                          child: Icon(
+                            Icons.person_off,
+                            color: Colors.grey,
+                            size: 40,
+                          ),
+                        );
                       }
                     } else {
                       // 🟢 SCREEN SHARE LOGIC (Small Overlay)
@@ -98,28 +125,62 @@ class CallView extends GetView<CallController> {
                         return Container(
                           color: Colors.grey.shade900,
                           child: const Center(
-                            child: Icon(Icons.mobile_screen_share, color: Colors.blue, size: 40),
+                            child: Icon(
+                              Icons.mobile_screen_share,
+                              color: Colors.blue,
+                              size: 40,
+                            ),
                           ),
                         );
                       }
 
                       if (controller.isLocalReady.value) {
                         if (controller.isVideoOn.value) {
-                          return RTCVideoView(
-                            controller.localRenderer,
-                            mirror: true,
-                            objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+                          // 🟢 UPDATED: Use VideoTile for Local Overlay
+                          return VideoTile(
+                            renderer: controller.localRenderer,
+                            userName: controller.getLocalName(),
+                            isMicOn: controller.isMicOn.value,
+                            isLocal: true,
                           );
                         } else {
-                          return const Center(child: Icon(Icons.videocam_off, color: Colors.grey, size: 40));
+                          return const Center(
+                            child: Icon(
+                              Icons.videocam_off,
+                              color: Colors.grey,
+                              size: 40,
+                            ),
+                          );
                         }
                       } else {
                         return const Center(
-                          child: CircularProgressIndicator(color: Colors.blueAccent, strokeWidth: 2),
+                          child: CircularProgressIndicator(
+                            color: Colors.blueAccent,
+                            strokeWidth: 2,
+                          ),
                         );
                       }
                     }
                   }),
+                ),
+              ),
+            ),
+          ),
+          // info icon
+          Positioned(
+            top: 40, // Adjust for status bar
+            left: 16,
+            child: SafeArea(
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.black45, // Semi-transparent background
+                  borderRadius: BorderRadius.circular(30),
+                ),
+                child: IconButton(
+                  icon: const Icon(Icons.info_outline, color: Colors.white),
+                  onPressed:
+                      controller.showMeetingInfo, // Calls the function we made
+                  tooltip: "Meeting Info",
                 ),
               ),
             ),
@@ -137,7 +198,10 @@ class CallView extends GetView<CallController> {
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 8,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.grey.shade900.withValues(alpha: 0.8),
                         borderRadius: BorderRadius.circular(30),
@@ -146,26 +210,42 @@ class CallView extends GetView<CallController> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Obx(() => _buildIconButton(
-                            icon: controller.isMicOn.value ? Icons.mic : Icons.mic_off,
-                            color: controller.isMicOn.value ? Colors.white : Colors.redAccent,
-                            onTap: controller.toggleMic,
-                          )),
+                          Obx(
+                            () => _buildIconButton(
+                              icon: controller.isMicOn.value
+                                  ? Icons.mic
+                                  : Icons.mic_off,
+                              color: controller.isMicOn.value
+                                  ? Colors.white
+                                  : Colors.redAccent,
+                              onTap: controller.toggleMic,
+                            ),
+                          ),
 
-                          Obx(() => _buildIconButton(
-                            icon: controller.isVideoOn.value ? Icons.videocam : Icons.videocam_off,
-                            color: controller.isVideoOn.value ? Colors.white : Colors.redAccent,
-                            onTap: controller.toggleCamera,
-                          )),
+                          Obx(
+                            () => _buildIconButton(
+                              icon: controller.isVideoOn.value
+                                  ? Icons.videocam
+                                  : Icons.videocam_off,
+                              color: controller.isVideoOn.value
+                                  ? Colors.white
+                                  : Colors.redAccent,
+                              onTap: controller.toggleCamera,
+                            ),
+                          ),
 
                           // screen share button
-                          Obx(() => _buildIconButton(
-                            icon: screenCtrl.isScreenSharing.value 
-                                ? Icons.mobile_screen_share 
-                                : Icons.screen_share_rounded,
-                            color: screenCtrl.isScreenSharing.value ? Colors.blue : Colors.white,
-                            onTap: screenCtrl.toggleScreenShare,
-                          )),
+                          Obx(
+                            () => _buildIconButton(
+                              icon: screenCtrl.isScreenSharing.value
+                                  ? Icons.mobile_screen_share
+                                  : Icons.screen_share_rounded,
+                              color: screenCtrl.isScreenSharing.value
+                                  ? Colors.blue
+                                  : Colors.white,
+                              onTap: screenCtrl.toggleScreenShare,
+                            ),
+                          ),
 
                           _buildIconButton(
                             icon: Icons.chat_bubble_outline_rounded,
@@ -182,7 +262,7 @@ class CallView extends GetView<CallController> {
 
                     const SizedBox(width: 10),
 
-                    // end call button 
+                    // end call button
                     GestureDetector(
                       onTap: () => controller.onEndCallPressed(),
                       child: Container(
@@ -192,31 +272,21 @@ class CallView extends GetView<CallController> {
                           color: Colors.red,
                           shape: BoxShape.circle,
                           boxShadow: [
-                            BoxShadow(color: Colors.red.withValues(alpha: 0.5), blurRadius: 10)
-                          ]
+                            BoxShadow(
+                              color: Colors.red.withValues(alpha: 0.5),
+                              blurRadius: 10,
+                            ),
+                          ],
                         ),
-                        child: const Icon(Icons.call_end, color: Colors.white, size: 28),
+                        child: const Icon(
+                          Icons.call_end,
+                          color: Colors.white,
+                          size: 28,
+                        ),
                       ),
                     ),
                   ],
                 ),
-              ),
-            ),
-          ),
-          
-          // room id display
-          Positioned(
-            top: 50,
-            left: 20,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: Colors.black54,
-                borderRadius: BorderRadius.circular(8)
-              ),
-              child: Text(
-                "Room: ${controller.roomId}", 
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)
               ),
             ),
           ),
@@ -226,9 +296,9 @@ class CallView extends GetView<CallController> {
   }
 
   Widget _buildIconButton({
-    required IconData icon, 
-    required VoidCallback onTap, 
-    Color color = Colors.white
+    required IconData icon,
+    required VoidCallback onTap,
+    Color color = Colors.white,
   }) {
     return Material(
       color: Colors.transparent,
