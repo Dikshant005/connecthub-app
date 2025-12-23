@@ -45,7 +45,7 @@ class ChatController extends GetxController {
             .toList();
       }
     } catch (e) {
-      print("Error loading chat: $e");
+      debugPrint("Error loading chat: $e");
     }
   }
 
@@ -66,7 +66,6 @@ class ChatController extends GetxController {
 
   void setupSocketListeners() {
     _socketService.socket.on('receive-chat-message', (msg) {
-       print("📩 New Message: $msg");
        chatMessages.add(ChatMessage.fromJson(msg));
     });
   }

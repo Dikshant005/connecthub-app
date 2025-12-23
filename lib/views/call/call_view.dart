@@ -1,13 +1,17 @@
+import 'package:connect_hub/controllers/screen_share_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import '../../controllers/call_controller.dart';
+import 'screen_share_view.dart'; // 🟢 IMPORT THE VIEW
 
 class CallView extends GetView<CallController> {
   const CallView({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final ScreenShareController screenCtrl = Get.find();
+    
     return Scaffold(
       backgroundColor: Colors.black,
       body: Stack(
@@ -19,6 +23,11 @@ class CallView extends GetView<CallController> {
               bool showLocal = controller.isViewSwapped.value;
 
               if (showLocal) {
+                // 🟢 SCREEN SHARE LOGIC (Full Screen)
+                if (screenCtrl.isScreenSharing.value) {
+                  return const ScreenShareView();
+                }
+                
                 if (controller.isLocalReady.value) {
                   return controller.isVideoOn.value 
                       ? RTCVideoView(
@@ -83,6 +92,17 @@ class CallView extends GetView<CallController> {
                         return const Center(child: Icon(Icons.person_off, color: Colors.grey, size: 40));
                       }
                     } else {
+                      // 🟢 SCREEN SHARE LOGIC (Small Overlay)
+                      if (screenCtrl.isScreenSharing.value) {
+                        // Use a simplified view for small overlay
+                        return Container(
+                          color: Colors.grey.shade900,
+                          child: const Center(
+                            child: Icon(Icons.mobile_screen_share, color: Colors.blue, size: 40),
+                          ),
+                        );
+                      }
+
                       if (controller.isLocalReady.value) {
                         if (controller.isVideoOn.value) {
                           return RTCVideoView(
@@ -119,7 +139,7 @@ class CallView extends GetView<CallController> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                       decoration: BoxDecoration(
-                        color: Colors.grey.shade900.withOpacity(0.8),
+                        color: Colors.grey.shade900.withValues(alpha: 0.8),
                         borderRadius: BorderRadius.circular(30),
                         border: Border.all(color: Colors.white10),
                       ),
@@ -138,10 +158,14 @@ class CallView extends GetView<CallController> {
                             onTap: controller.toggleCamera,
                           )),
 
-                          _buildIconButton(
-                            icon: Icons.screen_share_rounded,
-                            onTap: controller.onScreenSharePressed,
-                          ),
+                          // screen share button
+                          Obx(() => _buildIconButton(
+                            icon: screenCtrl.isScreenSharing.value 
+                                ? Icons.mobile_screen_share 
+                                : Icons.screen_share_rounded,
+                            color: screenCtrl.isScreenSharing.value ? Colors.blue : Colors.white,
+                            onTap: screenCtrl.toggleScreenShare,
+                          )),
 
                           _buildIconButton(
                             icon: Icons.chat_bubble_outline_rounded,
@@ -168,7 +192,7 @@ class CallView extends GetView<CallController> {
                           color: Colors.red,
                           shape: BoxShape.circle,
                           boxShadow: [
-                            BoxShadow(color: Colors.red.withOpacity(0.5), blurRadius: 10)
+                            BoxShadow(color: Colors.red.withValues(alpha: 0.5), blurRadius: 10)
                           ]
                         ),
                         child: const Icon(Icons.call_end, color: Colors.white, size: 28),

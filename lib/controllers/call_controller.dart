@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:connect_hub/controllers/screen_share_controller.dart';
 import 'package:connect_hub/views/call/chat_view.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart' hide navigator;
@@ -7,18 +8,24 @@ import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:get_storage/get_storage.dart';
 import '../services/socket_service.dart';
 import '../services/api_service.dart';
+// inside CallController onInit()
+import 'package:permission_handler/permission_handler.dart'; // Add this package
+
 
 class CallController extends GetxController {
   final SocketService _socketService = Get.find();
   final ApiService _api = Get.find();
   final box = GetStorage();
 
+  MediaStream? _localStream;
+  RTCPeerConnection? _peerConnection;
+
   // video renders
   final localRenderer = RTCVideoRenderer();
   final remoteRenderer = RTCVideoRenderer();
 
-  MediaStream? _localStream;
-  RTCPeerConnection? _peerConnection;
+  MediaStream? get localStream => _localStream;
+  RTCPeerConnection? get peerConnection => _peerConnection;
 
   late String roomId;
   late bool isHost;
@@ -43,7 +50,7 @@ class CallController extends GetxController {
   bool _isPcReady = false;
 
   @override
-  void onInit() {
+  void onInit() async {
     super.onInit();
     final args = Get.arguments;
     roomId = args['roomId'];
@@ -51,7 +58,6 @@ class CallController extends GetxController {
     myUserId = (box.read('userId')?.toString() ?? 'Unknown');
 
     if (_socketService.socket.disconnected) {
-      print("🔌 Reconnecting socket...");
       _socketService.socket.connect();
     }
 
@@ -65,26 +71,22 @@ class CallController extends GetxController {
 
     // Fetch participants immediately
     fetchParticipants();
+    await Permission.notification.request();
   }
 
   Future<void> _ensureBackendJoin() async {
     try {
       await _api.joinMeeting(roomId);
     } catch (e) {
-      print('⚠️ Failed to ensure backend join: $e');
+      debugPrint('Failed to ensure backend join: $e');
     }
   }
 
   // Fetch participants from backend
 
   void fetchParticipants() async {
-    print("🔍 Fetching participants for Room: $roomId...");
     try {
       final res = await _api.getParticipants(roomId);
-      
-      print("📥 API STATUS: ${res.statusCode}");
-      print("📥 API BODY: ${res.body}");
-
       if (res.statusCode == 200) {
         // handle response body
         var data = res.body;
@@ -95,17 +97,17 @@ class CallController extends GetxController {
         // update participants list
         if (data is Map && data['participants'] != null) {
           List<dynamic> list = data['participants'];
-          participants.value = list; // Update UI
-          participants.refresh();    // Force UI Refresh
-          print("Success! Participants count: ${list.length}");
+          participants.value = list; 
+          participants.refresh();  
+          debugPrint("Success! Participants count: ${list.length}");
         } else {
-          print("'participants' key missing in response");
+          debugPrint("'participants' key missing in response");
         }
       } else {
-        print("API Error: ${res.statusText}");
+        debugPrint("API Error: ${res.statusText}");
       }
     } catch (e) {
-      print("CRASH fetching participants: $e");
+      debugPrint("CRASH fetching participants: $e");
     }
   }
 
@@ -117,7 +119,6 @@ class CallController extends GetxController {
     // webrtc signalling event
     _socketService.socket.on('user-connected', (userId) async {
       if (_isDisposed || userId == myUserId) return;
-      print("👋 User Connected: $userId");
 
       if (remoteUserId != null) _softResetPeer();
       remoteUserId = userId;
@@ -125,7 +126,6 @@ class CallController extends GetxController {
       if (isHost) {
         await Future.delayed(const Duration(seconds: 1));
         if (_isDisposed) return;
-        print("🚀 Host initiating call...");
         await _createPeerConnection();
         await _createOffer();
       }
@@ -134,19 +134,17 @@ class CallController extends GetxController {
 
     // update participants on join/leave
     _socketService.socket.on('user-joined', (data) {
-       print("➕ User joined event received");
-       fetchParticipants(); // Refresh list
+       fetchParticipants();
     });
 
     _socketService.socket.on('user-left', (data) {
-       print("➖ User left event received");
-       fetchParticipants(); // Refresh list
+       fetchParticipants(); 
     });
 
     // clean up on user disconnect
     void handleUserLeft(data) {
        if (_isDisposed) return;
-       print("❌ Remote user disconnected");
+       debugPrint("Remote user disconnected");
        _softResetPeer();
        // We also fetch participants here just in case 'user-left' missed
        fetchParticipants(); 
@@ -268,7 +266,12 @@ class CallController extends GetxController {
   }
 
   void onScreenSharePressed() {
-    Get.snackbar("Feature", "Screen Sharing coming soon!");
+    try {
+      // Find the dedicated controller and toggle sharing
+      Get.find<ScreenShareController>().toggleScreenShare();
+    } catch (e) {
+      debugPrint("Error finding ScreenShareController: $e");
+    }
   }
 
   void onChatPressed() {

@@ -62,21 +62,8 @@ class HomeController extends GetxController {
     Get.dialog(const Center(child: CircularProgressIndicator(color: Colors.indigo)), barrierDismissible: false);
 
     try {
-      // DEBUGGING IDENTITY
-      String myToken = box.read('token') ?? "NO TOKEN";
-      String myId = box.read('userId') ?? "NO ID";
-      print("🕵️ JOIN ATTEMPT:");
-      print("🕵️ User ID in Storage: $myId");
-      print("🕵️ Token in Storage: ${myToken.substring(0, 10)}..."); // Print first 10 chars
-
-      print("🚀 CALLING API: POST /meetings/$code/join");
-      
       final response = await _api.joinMeeting(code);
       Get.back(); 
-
-      print("📥 STATUS: ${response.statusCode}");
-      print("📥 BODY: ${response.body}");
-
       if (response.statusCode == 200 || response.statusCode == 201) {
         // Check if server ignored us
         var data = response.body;
@@ -84,8 +71,8 @@ class HomeController extends GetxController {
         
         // If message is "Already joined" but we are a NEW user, the Token is wrong!
         if (data['message'] == 'Already joined') {
-           print("🚨 CRITICAL WARNING: Server says 'Already Joined'.");
-           print("🚨 This means the Server thinks you are the HOST.");
+           debugPrint("CRITICAL WARNING: Server says 'Already Joined'.");
+           debugPrint("This means the Server thinks you are the HOST.");
         }
 
         Get.back(); 
@@ -97,7 +84,6 @@ class HomeController extends GetxController {
       }
     } catch (e) {
       Get.back();
-      print("❌ ERROR: $e");
       Get.snackbar("Error", "Connection failed");
     }
   }
