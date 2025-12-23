@@ -72,4 +72,9 @@ class ApiService extends GetConnect {
   Future<Response> getParticipants(String roomId) {
     return get('/meetings/$roomId/participants');
   }
+
+  //chat endpoints
+  Future<Response> getChatHistory(String roomId) {
+    return get('/chat/$roomId');
+  }
 }

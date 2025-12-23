@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:connect_hub/views/call/chat_view.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart' hide navigator;
 import 'package:flutter_webrtc/flutter_webrtc.dart';
@@ -271,7 +272,12 @@ class CallController extends GetxController {
   }
 
   void onChatPressed() {
-    Get.snackbar("Feature", "Chat coming soon!");
+    Get.bottomSheet(
+      const ChatView(),
+      isScrollControlled: true,
+      enableDrag: true,
+      ignoreSafeArea: false,
+    );
   }
 
   // participants bottom sheet
