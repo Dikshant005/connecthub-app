@@ -215,7 +215,7 @@ class CallController extends GetxController {
     });
 
     // 2. Mic Toggled Event (Moved out of user-connected)
-    _socketService.socket.on('mic-toggled', (data) {
+    _socketService.socket.on('peer-mic-state', (data) {
       if (_isDisposed) return;
       String userId = data['userId'];
       bool status = data['isMicOn'];
@@ -340,7 +340,7 @@ class CallController extends GetxController {
     _socketService.socket.off('signal');
     _socketService.socket.off('ice-candidate');
     _socketService.socket.off('user-disconnected');
-    _socketService.socket.off('mic-toggled'); // Remove mic listener too
+    _socketService.socket.off('mic-toggled'); 
     _socketService.socket.disconnect();
     Get.offAllNamed('/home');
   }
