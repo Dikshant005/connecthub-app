@@ -8,16 +8,12 @@ class HomeController extends GetxController {
   final ApiService _api = Get.find();
   final box = GetStorage();
   
+  // FIX 1: No onClose/dispose here. 
+  // GetX will garbage collect this controller when HomeController is destroyed.
   final joinCodeController = TextEditingController();
 
   String get displayName =>
       box.read('userName') ?? box.read('username') ?? "Guest";
-
-  @override
-  void onClose() {
-    joinCodeController.dispose();
-    super.onClose();
-  }
 
   void logout() {
     box.erase();
@@ -37,7 +33,7 @@ class HomeController extends GetxController {
           : title!.trim();
 
       final response = await _api.createMeeting(meetingTitle);
-      Get.back(); // close loader
+      Get.back(); // Close loader
 
       if (response.statusCode == 201) {
         var data = response.body;
@@ -52,7 +48,7 @@ class HomeController extends GetxController {
         Get.snackbar("Failed", "Could not create meeting");
       }
     } catch (e) {
-      Get.back();
+      if (Get.isDialogOpen ?? false) Get.back(); // Ensure loader closes on error
       Get.snackbar("Error", e.toString());
     }
   }
@@ -62,32 +58,38 @@ class HomeController extends GetxController {
     String code = joinCodeController.text.trim();
     if (code.isEmpty) return;
 
-    Get.dialog(const Center(child: CircularProgressIndicator(color: Colors.indigo)), barrierDismissible: false);
+    Get.dialog(
+      const Center(child: CircularProgressIndicator(color: Colors.indigo)), 
+      barrierDismissible: false
+    );
 
     try {
       final response = await _api.joinMeeting(code);
-      Get.back(); 
+      Get.back(); // FIX 2: This closes the loader. ONE time is enough.
+
       if (response.statusCode == 200 || response.statusCode == 201) {
-        // Check if server ignored us
         var data = response.body;
         if (data is String) data = jsonDecode(data);
         
-        // If message is "Already joined" but we are a NEW user, the Token is wrong!
         if (data['message'] == 'Already joined') {
-           debugPrint("CRITICAL WARNING: Server says 'Already Joined'.");
-           debugPrint("This means the Server thinks you are the HOST.");
+           debugPrint("WARNING: Server says 'Already Joined'.");
         }
 
-        Get.back(); 
+        // REMOVED: Get.back(); <--- This was the bug closing the Home screen
+        
         Get.toNamed('/call', arguments: {'roomId': code, 'isHost': false});
       
       } else {
-        String error = response.body['message'] ?? "Unknown Error";
+        // Handle error safely
+        var body = response.body;
+        if (body is String) body = jsonDecode(body);
+        String error = body['message'] ?? "Unknown Error";
+        
         Get.snackbar("Failed", error, backgroundColor: Colors.red, colorText: Colors.white);
       }
     } catch (e) {
-      Get.back();
-      Get.snackbar("Error", "Connection failed");
+      if (Get.isDialogOpen ?? false) Get.back(); // Safety check
+      Get.snackbar("Error", "Connection failed: $e");
     }
   }
 }
