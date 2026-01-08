@@ -80,6 +80,48 @@ class AuthController extends GetxController {
     Get.offAllNamed(Routes.LOGIN);
   }
 
+  // forgot password (send reset link)
+  void forgotPassword(String email) async {
+    if (email.isEmpty) {
+      Get.snackbar('Error', 'Email is required', backgroundColor: Colors.redAccent, colorText: Colors.white);
+      return;
+    }
+
+    try {
+      final response = await _api.forgotPassword(email.trim());
+      final data = _parseBody(response.body);
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        Get.snackbar('Success', data is Map && data['message'] != null ? data['message'] : 'If that email exists, a reset link has been sent.', backgroundColor: Colors.green, colorText: Colors.white);
+        Get.offNamed(Routes.LOGIN);
+      } else {
+        _showErrorSnackbar('Failed', data);
+      }
+    } catch (e) {
+      _showConnectionError(e);
+    }
+  }
+
+  // reset password using token (or JWT in header)
+  void resetPassword({String? token, required String newPassword}) async {
+    if (newPassword.isEmpty) {
+      Get.snackbar('Error', 'Enter new password', backgroundColor: Colors.redAccent, colorText: Colors.white);
+      return;
+    }
+
+    try {
+      final response = await _api.resetPassword(token: token, newPassword: newPassword);
+      final data = _parseBody(response.body);
+      if (response.statusCode == 200) {
+        Get.snackbar('Success', data is Map && data['message'] != null ? data['message'] : 'Password reset successful', backgroundColor: Colors.green, colorText: Colors.white);
+        Get.offNamed(Routes.LOGIN);
+      } else {
+        _showErrorSnackbar('Failed', data);
+      }
+    } catch (e) {
+      _showConnectionError(e);
+    }
+  }
+
   // validates input fields not empty  
   bool _validateFields({required bool isSignup}) {
     if (emailController.text.isEmpty || passwordController.text.isEmpty) {

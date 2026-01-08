@@ -243,12 +243,17 @@ class HomeView extends StatelessWidget {
             child: Text("Logout", style: TextStyle(color: Colors.red[400], fontWeight: FontWeight.w600)),
           ),
           const SizedBox(width: 8),
-          CircleAvatar(
-            radius: 20,
-            backgroundColor: Colors.indigo.shade50,
-            child: Text(
-              displayName.isNotEmpty ? displayName[0].toUpperCase() : "U",
-              style: const TextStyle(color: Colors.indigo, fontWeight: FontWeight.bold),
+          InkWell(
+            onTap: () {
+              Get.offAllNamed('/profile');
+            },
+            child: CircleAvatar(
+              radius: 20,
+              backgroundColor: Colors.indigo.shade50,
+              child: Text(
+                displayName.isNotEmpty ? displayName[0].toUpperCase() : "U",
+                style: const TextStyle(color: Colors.indigo, fontWeight: FontWeight.bold),
+              ),
             ),
           ),
           const SizedBox(width: 20),

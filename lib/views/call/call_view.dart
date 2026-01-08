@@ -11,6 +11,9 @@ class CallView extends GetView<CallController> {
   @override
   Widget build(BuildContext context) {
     final ScreenShareController screenCtrl = Get.find();
+    // host flags (in 1:1 meetings host is either local or remote)
+    final bool localIsHost = controller.isHost;
+    final bool remoteIsHost = !controller.isHost;
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -36,6 +39,7 @@ class CallView extends GetView<CallController> {
                           userName: controller.getLocalName(),
                           isMicOn: controller.isMicOn.value,
                           isLocal: true,
+                          isHost: localIsHost,
                         )
                       : const Center(
                           child: Icon(
@@ -57,6 +61,7 @@ class CallView extends GetView<CallController> {
                     userName: controller.getRemoteName(),
                     isMicOn: controller.isRemoteMicOn.value,
                     isLocal: false,
+                    isHost: remoteIsHost,
                   );
                 } else {
                   return const Center(
@@ -80,7 +85,7 @@ class CallView extends GetView<CallController> {
           // local video (small overlay)
           Positioned(
             top: 50,
-            right: 20,
+            right: 12, // shift slightly left to avoid overflow on small screens
             child: GestureDetector(
               onTap: () => controller.toggleViewSwap(),
               child: Container(
@@ -108,6 +113,7 @@ class CallView extends GetView<CallController> {
                           userName: controller.getRemoteName(),
                           isMicOn: controller.isRemoteMicOn.value,
                           isLocal: false,
+                          isHost: remoteIsHost,
                         );
                       } else {
                         return const Center(
@@ -142,6 +148,7 @@ class CallView extends GetView<CallController> {
                             userName: controller.getLocalName(),
                             isMicOn: controller.isMicOn.value,
                             isLocal: true,
+                            isHost: localIsHost,
                           );
                         } else {
                           return const Center(

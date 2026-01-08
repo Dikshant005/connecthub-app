@@ -40,6 +40,9 @@ class CallController extends GetxController {
   // participants list
   final participants = <dynamic>[].obs;
 
+  // host user id provided by backend (if any)
+  String? hostUserId;
+
   // button states
   final isMicOn = true.obs;
   final isVideoOn = true.obs;
@@ -183,6 +186,22 @@ class CallController extends GetxController {
           participants.value = list; 
           participants.refresh();  
           debugPrint("Success! Participants count: ${list.length}");
+
+          // capture hostUserId if provided by backend
+          try {
+            if (data.containsKey('hostUserId') && data['hostUserId'] != null) {
+              hostUserId = data['hostUserId'].toString();
+            } else if (data.containsKey('hostUser') && data['hostUser'] != null) {
+              final h = data['hostUser'];
+              if (h is Map && h.containsKey('_id')) hostUserId = h['_id'].toString();
+            } else {
+              // fallback: if current caller was marked as host via args, use myUserId
+              hostUserId = isHost ? myUserId : null;
+            }
+          } catch (_) {
+            hostUserId = isHost ? myUserId : null;
+          }
+
         } else {
           debugPrint("'participants' key missing in response");
         }
@@ -443,7 +462,25 @@ class CallController extends GetxController {
                       backgroundColor: Colors.indigo.shade100,
                       child: Text(initial, style: const TextStyle(color: Colors.indigo, fontWeight: FontWeight.bold)),
                     ),
-                    title: Text(name, style: const TextStyle(fontWeight: FontWeight.w600)),
+                    title: Builder(builder: (context) {
+                      // Determine host status from backend-provided hostUserId or participant flags
+                      bool participantIsHost = false;
+                      try {
+                        if (p is Map) {
+                          // prefer explicit hostUserId from participants endpoint
+                          if (hostUserId != null && p.containsKey('_id') && p['_id'].toString() == hostUserId) {
+                            participantIsHost = true;
+                          } else {
+                            if (p.containsKey('isHost') && p['isHost'] == true) participantIsHost = true;
+                            if (p.containsKey('is_host') && p['is_host'] == true) participantIsHost = true;
+                            if (p.containsKey('role') && p['role'] == 'host') participantIsHost = true;
+                          }
+                        }
+                      } catch (_) {}
+
+                      final displayName = participantIsHost ? '$name (Host)' : name;
+                      return Text(displayName, style: const TextStyle(fontWeight: FontWeight.w600));
+                    }),
                     subtitle: Text(email, style: TextStyle(color: Colors.grey[600], fontSize: 12)),
                   );
                 },

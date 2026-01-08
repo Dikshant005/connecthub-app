@@ -6,6 +6,7 @@ class VideoTile extends StatelessWidget {
   final String userName;
   final bool isMicOn;
   final bool isLocal; // To mirror local video
+  final bool isHost; // show host badge
 
   const VideoTile({
     super.key,
@@ -13,6 +14,7 @@ class VideoTile extends StatelessWidget {
     required this.userName,
     required this.isMicOn,
     this.isLocal = false,
+    this.isHost = false,
   });
 
   @override
@@ -38,32 +40,62 @@ class VideoTile extends StatelessWidget {
             Positioned(
               bottom: 12,
               left: 12,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.black54, // Semi-transparent background
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Mic Icon Logic
-                    Icon(
-                      isMicOn ? Icons.mic : Icons.mic_off,
-                      color: isMicOn ? Colors.white : Colors.redAccent,
-                      size: 16,
-                    ),
-                    const SizedBox(width: 6),
-                    // Name Text
-                    Text(
-                      userName,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 120), // ensure overlay never grows beyond small tile
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.black54, // Semi-transparent background
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.max,
+                    children: [
+                      // Mic Icon Logic
+                      Icon(
+                        isMicOn ? Icons.mic : Icons.mic_off,
+                        color: isMicOn ? Colors.white : Colors.redAccent,
+                        size: 16,
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: 6),
+
+                      // Name Text - Expanded so it truncates properly and avoids overflow
+                      Expanded(
+                        child: Tooltip(
+                          message: userName,
+                          child: Text(
+                            userName,
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      if (isHost) ...[
+                        const SizedBox(width: 6),
+                        // Constrain host badge so it never forces overflow
+                        ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 48),
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Colors.indigo.shade700,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Text('Host', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
               ),
             ),
